@@ -8,4 +8,4 @@ print(carpeta_raiz)
 app_dir = carpeta_raiz / "app"
 data_dir = carpeta_raiz / "data"
 notebooks_dir = carpeta_raiz / "notebooks"
-modelos_dir = carpeta_raiz / "modelos"
+modelos_dir = carpeta_raiz / "models"
