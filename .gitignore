@@ -1,3 +1,5 @@
 # Archivos Notebooks a ignorar
 pruebas.ipynb
 
+# Archivo cache
+__pycache__
