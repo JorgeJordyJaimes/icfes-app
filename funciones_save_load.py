@@ -27,9 +27,7 @@ def guardar_parquet(df: pd.DataFrame, nombre_archivo: str = "archivo.parquet"):
     # Guardar el DataFrame en formato Parquet
     df.to_parquet(ruta_parquet)
 
-    print(f"Archivo guardado en: {ruta_parquet}")
-
-    return ruta_parquet
+    return print(f'Archivo guardado en la carpeta data con el nombre de {nombre_archivo}')
 
 
 
@@ -53,5 +51,5 @@ def cargar_parquet(nombre_archivo: str):
 
     # Cargar el archivo
     df = pd.read_parquet(ruta_parquet)
-
+    
     return df
