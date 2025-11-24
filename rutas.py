@@ -1,11 +1,12 @@
 from pathlib import Path
 
-# Carpeta raíz del proyecto
-carpeta_raiz = Path.cwd()
-print(carpeta_raiz)
+
+# Obtener la carpeta raíz del proyecto de forma robusta
+# __file__ apunta al archivo rutas.py
+carpeta_raiz = Path(__file__).resolve().parent
 
 # Carpetas relativas de subcarpetas
-app_dir = carpeta_raiz / "app"
 data_dir = carpeta_raiz / "data"
+app_dir = carpeta_raiz / "app"
 notebooks_dir = carpeta_raiz / "notebooks"
 modelos_dir = carpeta_raiz / "models"

@@ -1,9 +1,6 @@
 import pandas as pd
 from rutas import data_dir
 
-import pandas as pd
-from rutas import data_dir
-
 
 # ============================================================
 # FUNCIÓN: GUARDAR ARCHIVO PARQUET EN LA CARPETA /data
