@@ -54,6 +54,4 @@ def cargar_parquet(nombre_archivo: str):
     # Cargar el archivo
     df = pd.read_parquet(ruta_parquet)
 
-    print(f"Archivo cargado desde: {ruta_parquet}")
-
     return df
