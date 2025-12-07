@@ -7,10 +7,10 @@ from rutas import data_dir
 # ============================================================
 def guardar_parquet(df: pd.DataFrame, nombre_archivo: str = "archivo.parquet"):
     """
-    Guarda un DataFrame en formato Parquet dentro de la carpeta 'data'.
+    Guarda un DataFrame o Series en formato Parquet dentro de la carpeta 'data'.
 
     Parámetros:
-        df (pd.DataFrame): DataFrame que deseas guardar.
+        df (pd.DataFrame o pd.Series): Objeto a guardar.
         nombre_archivo (str): Nombre del archivo parquet a generar.
                               Ejemplo: 'icfes_2020_2.parquet'
 
@@ -18,16 +18,23 @@ def guardar_parquet(df: pd.DataFrame, nombre_archivo: str = "archivo.parquet"):
         ruta_parquet (Path): Ruta completa donde se guardó el archivo.
     """
 
+    # Si es una Series → convertir a DataFrame
+    if isinstance(df, pd.Series):
+        # Si la Series no tiene nombre, asignamos uno
+        col_name = df.name if df.name is not None else "col_0"
+        df = df.to_frame(name=col_name)
+
     # Asegurar que la carpeta /data exista
     data_dir.mkdir(parents=True, exist_ok=True)
 
     # Ruta final del archivo
     ruta_parquet = data_dir / nombre_archivo
 
-    # Guardar el DataFrame en formato Parquet
-    df.to_parquet(ruta_parquet)
+    # Guardar el archivo
+    df.to_parquet(ruta_parquet, index=False)
 
     return print(f'Archivo guardado en la carpeta data con el nombre de {nombre_archivo}')
+
 
 
 
