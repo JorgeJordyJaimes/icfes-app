@@ -1,5 +1,7 @@
 import pandas as pd
 from rutas import data_dir
+from rutas import modelos_dir
+import joblib
 
 
 # ============================================================
@@ -60,3 +62,33 @@ def cargar_parquet(nombre_archivo: str):
     df = pd.read_parquet(ruta_parquet)
     
     return df
+
+
+# ============================================================
+# GUARDAR MODELO
+# ============================================================
+
+def guardar_modelo(modelo, nombre_archivo="modelo_icfes.pkl"):
+    
+    modelos_ruta = modelos_dir / nombre_archivo
+    
+    joblib.dump(modelo, modelos_ruta)
+    
+    print(f"Modelo guardado con el nombre de: {nombre_archivo}")
+
+
+# ============================================================
+# CARGAR MODELO
+# ============================================================
+
+def cargar_modelo(nombre_archivo="modelo_icfes.pkl"):
+    
+    modelos_ruta = modelos_dir / nombre_archivo
+
+    if not modelos_ruta.exists():
+        raise FileNotFoundError(
+            f"El modelo '{nombre_archivo}' no se encontró en {modelos_dir}"
+        )
+    
+    print(f"Cargado modelo: {nombre_archivo}")
+    return joblib.load(modelos_ruta)
