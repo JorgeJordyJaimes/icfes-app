@@ -70,8 +70,13 @@ def cargar_parquet(nombre_archivo: str):
 
 def guardar_modelo(modelo, nombre_archivo="modelo_icfes.pkl"):
     
+    #Ruta donde se guardará el modelo
     modelos_ruta = modelos_dir / nombre_archivo
     
+    # Crear carpeta si no existe
+    modelos_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Guardar el modelo
     joblib.dump(modelo, modelos_ruta)
     
     print(f"Modelo guardado con el nombre de: {nombre_archivo}")
@@ -83,8 +88,10 @@ def guardar_modelo(modelo, nombre_archivo="modelo_icfes.pkl"):
 
 def cargar_modelo(nombre_archivo="modelo_icfes.pkl"):
     
+    # Ruta desde donde se cargará el modelo
     modelos_ruta = modelos_dir / nombre_archivo
 
+    # Comprobación que el modelo con ese nombre existe
     if not modelos_ruta.exists():
         raise FileNotFoundError(
             f"El modelo '{nombre_archivo}' no se encontró en {modelos_dir}"
