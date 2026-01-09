@@ -12,7 +12,8 @@ import plotly.graph_objects as go
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
 models_dir = project_root / "models"
-model_path = models_dir / "modelo_icfes_completo.pkl"
+model_path = models_dir / "modelo_comprimido.pkl"
+
 
 # Configuración de la página
 st.set_page_config(
