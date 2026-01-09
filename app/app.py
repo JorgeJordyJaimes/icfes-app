@@ -108,7 +108,10 @@ def crear_formulario():
     datos = {}
     
     st.title("📊 Predicción de Puntaje ICFES")
-    st.markdown("Complete el siguiente formulario con información socioeconómica:")
+    st.markdown("""El objetivo de este ejercicio es proponer un pequeño “juego” al usuario.
+Muchas personas suelen afirmar que el examen ICFES “antes era más difícil”. La invitación es a que te pongas en los zapatos de tu yo del pasado y respondas el formulario según tu situación socioeconómica real en la época en que presentaste el examen.
+
+Con esa información, el modelo estimará cómo te habría ido si hubieras presentado el ICFES con esas mismas condiciones, pero en el examen actual. El resultado no es una predicción exacta, sino una forma interesante de comparar percepciones y reflexionar sobre qué tan diferente (o no) es el examen hoy.""")
     
     # ========== SECCIÓN 1: INFORMACIÓN PERSONAL ==========
     with st.expander("👤 INFORMACIÓN PERSONAL", expanded=True):
