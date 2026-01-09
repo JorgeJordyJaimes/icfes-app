@@ -10,3 +10,4 @@ __pycache__
 
 # Ignorar los modelos guardados
 *.pkl
+!modelo_comprimido.pkl
