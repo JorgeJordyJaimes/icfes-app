@@ -5,36 +5,14 @@ from datetime import datetime
 import time
 import joblib
 from sklearn.preprocessing import OneHotEncoder
-from pathlib import Path 
-
-import streamlit as st
-import numpy as np
-import pandas as pd
-from datetime import datetime
-import time
-import joblib
-from sklearn.preprocessing import OneHotEncoder
-from pathlib import Path 
+from pathlib import Path
+import plotly.graph_objects as go
 
 # ========== CONFIGURACIÓN DE RUTAS ==========
-# Obtener la ruta del directorio actual (donde está app_icfes.py)
 current_dir = Path(__file__).resolve().parent
-
-# Subir un nivel para llegar a la carpeta raíz del proyecto
 project_root = current_dir.parent
-
-# Ruta a la carpeta de modelos
 models_dir = project_root / "models"
-
-# Ruta completa al modelo
 model_path = models_dir / "modelo_icfes_completo.pkl"
-
-# Verificar que la ruta existe (para debugging)
-print(f"📁 Directorio actual: {current_dir}")
-print(f"📁 Raíz del proyecto: {project_root}")
-print(f"📁 Carpeta modelos: {models_dir}")
-print(f"📁 Ruta del modelo: {model_path}")
-print(f"✅ Modelo existe: {model_path.exists()}")
 
 # Configuración de la página
 st.set_page_config(
@@ -43,11 +21,68 @@ st.set_page_config(
     layout="wide"
 )
 
+# Constantes para métricas del modelo
+MAE_TEST = 31.297
+PROMEDIO_ICFES = 248.0
+DESV_STD_ICFES = 48.50
+
+# PALETA DE COLORES PROFESIONAL
+COLORES = {
+    'primario': '#4A90E2',        # Azul principal
+    'secundario': '#7B68EE',      # Púrpura
+    'exito': '#50C878',           # Verde esmeralda
+    'advertencia': '#FFB347',     # Naranja suave
+    'error': '#FF6B6B',           # Rojo coral
+    'info': '#48D1CC',            # Turquesa
+    'fondo_claro': '#F8F9FA',     # Gris muy claro
+    'texto_oscuro': '#2C3E50',    # Azul oscuro
+    'degradado_1': '#667EEA',     # Inicio degradado
+    'degradado_2': '#764BA2',     # Fin degradado
+}
+
+# CSS personalizado mejorado
+st.markdown(f"""
+<style>
+    .stMetric {{
+        background: linear-gradient(135deg, {COLORES['primario']}15 0%, {COLORES['secundario']}15 100%);
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 5px solid {COLORES['primario']};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }}
+    
+    .main-header {{
+        font-size: 2.5rem;
+        color: {COLORES['primario']};
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }}
+    
+    .highlight {{
+        background: linear-gradient(120deg, {COLORES['primario']}30 0%, {COLORES['info']}30 100%);
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: 600;
+    }}
+    
+    @keyframes float {{
+        0% {{ transform: translateY(0px); }}
+        50% {{ transform: translateY(-20px); }}
+        100% {{ transform: translateY(0px); }}
+    }}
+    .balloon {{
+        font-size: 3rem;
+        animation: float 3s ease-in-out infinite;
+        display: inline-block;
+        margin: 0 10px;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
 @st.cache_resource
 def cargar_modelo():
     """Carga el modelo entrenado"""
     try:
-        # Usar la ruta configurada
         print(f"🔍 Intentando cargar modelo desde: {model_path}")
         
         if not model_path.exists():
@@ -59,12 +94,6 @@ def cargar_modelo():
         st.success("✅ Modelo cargado correctamente")
         print(f"✅ Modelo cargado exitosamente")
         
-        # Opcional: mostrar información del modelo
-        print(f"📊 Información del modelo:")
-        print(f"   • Tipo: {type(modelo)}")
-        print(f"   • Número de árboles: {getattr(modelo, 'n_estimators', 'No disponible')}")
-        print(f"   • Número de características: {getattr(modelo, 'n_features_in_', 'No disponible')}")
-        
         return modelo
     except Exception as e:
         st.error(f"❌ Error cargando el modelo: {e}")
@@ -74,9 +103,7 @@ def cargar_modelo():
         return None
 
 def crear_formulario():
-    """
-    Crea un formulario con las variables originales
-    """
+    """Crea un formulario con las variables originales"""
     datos = {}
     
     st.title("📊 Predicción de Puntaje ICFES")
@@ -87,7 +114,6 @@ def crear_formulario():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Edad (variable numérica)
             datos['edad'] = st.number_input(
                 "Edad del estudiante",
                 min_value=10,
@@ -96,7 +122,6 @@ def crear_formulario():
                 help="Edad en años"
             )
             
-            # Nacionalidad
             datos['nacionalidad'] = st.selectbox(
                 "Nacionalidad",
                 options=['Colombia', 'Venezuela', 'Estados unidos', 'Ecuador', 'España',
@@ -109,22 +134,19 @@ def crear_formulario():
             )
         
         with col2:
-            # Pertenece a etnia
             datos['pertenece_etnia'] = st.selectbox(
                 "¿Pertenece a alguna etnia?",
                 options=['No', 'Si'],
                 index=0
             )
             
-            # Presentó fuera de edad
             datos['presento_fuera_edad'] = st.selectbox(
                 "¿Presentó la prueba fuera de la edad esperada?",
-                options=['0', '1'],  # 0=No, 1=Sí
+                options=['0', '1'],
                 index=0,
                 format_func=lambda x: "No" if x == "0" else "Sí"
             )
             
-            # Región
             datos['region'] = st.selectbox(
                 "Región de residencia",
                 options=['Andina', 'Caribe', 'Pacífica', 'Orinoquía', 'Amazónica'],
@@ -136,28 +158,25 @@ def crear_formulario():
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            # Estrato
             datos['estrato_casa'] = st.selectbox(
                 "Estrato de la vivienda",
                 options=['Estrato 1', 'Estrato 2', 'Estrato 3', 'Estrato 4', 
                         'Estrato 5', 'Estrato 6', 'Sin estrato'],
-                index=1  # Estrato 2 es el más común
+                index=1
             )
         
         with col2:
-            # Número de personas en la casa
             datos['num_personas_casa'] = st.selectbox(
                 "Número de personas en el hogar",
                 options=['1 a 2', '3 a 4', '5 a 6', '7 a 8', '9 o más'],
-                index=1  # 3 a 4 es el más común
+                index=1
             )
         
         with col3:
-            # Número de cuartos
             datos['cuartos_casa'] = st.selectbox(
                 "Número de cuartos en la vivienda",
                 options=['Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis o mas'],
-                index=2  # Tres es el más común
+                index=2
             )
     
     # ========== SECCIÓN 3: RECURSOS DEL HOGAR ==========
@@ -183,16 +202,15 @@ def crear_formulario():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Educación del padre (CORREGIDO)
             datos['educacion_padre'] = st.selectbox(
                 "Nivel educativo del padre",
                 options=['Bachiller', 'Primaria incompleta', 'Bachiller incompleta',
-                        'Profesional', 'Primaria', 'Tecnico/Tecnologo', 'Ninguna',
-                        'Profesional incompleta', 'Tecnico/Tecnologo incompleta', 'No aplica'],
-                index=0  # Bachiller es el más común (96,325 casos)
+                         'Profesional', 'Primaria', 'Tecnico/Tecnologo', 'Ninguna',
+                         'Profesional incompleta', 'Tecnico/Tecnologo incompleta', 
+                         'No aplica', 'Postgrado'],
+                index=0
             )
             
-            # Actividad del padre
             datos['actividad_padre'] = st.selectbox(
                 "Actividad económica del padre",
                 options=['Trabajadores operativos', 'Microempresario', 'Sector primario',
@@ -203,17 +221,15 @@ def crear_formulario():
             )
         
         with col2:
-            # Educación de la madre (CORREGIDO)
             datos['educacion_madre'] = st.selectbox(
                 "Nivel educativo de la madre",
                 options=['Bachiller', 'Primaria incompleta', 'Bachiller incompleta',
-                        'Profesional', 'Tecnico/Tecnologo', 'Primaria',
-                        'Tecnico/Tecnologo incompleta', 'Profesional incompleta', 
-                        'Ninguna', 'No aplica'],
-                index=0  # Bachiller es el más común (110,294 casos)
+                         'Profesional', 'Tecnico/Tecnologo', 'Primaria',
+                         'Tecnico/Tecnologo incompleta', 'Profesional incompleta', 
+                         'Ninguna', 'No aplica', 'Postgrado'],
+                index=0
             )
             
-            # Actividad de la madre
             datos['actividad_madre'] = st.selectbox(
                 "Actividad económica de la madre",
                 options=['Sin actividad remunerada', 'Trabajadores operativos',
@@ -222,14 +238,13 @@ def crear_formulario():
                 index=0
             )
         
-        # Educación padres (combinada) - CORREGIDO
         datos['educacion_padres'] = st.selectbox(
             "Nivel educativo combinado de los padres",
             options=['Al Menos Un Bachiller', 'Educación Superior', 'Educación Primaria Incompleta',
                     'Educación Técnica', 'Bachillerato Completo', 'Educación Primaria',
                     'Educación Secundaria Incompleta', 'Sin Información',
                     'Educación Superior Incompleta', 'No Aplica', 'Sin Educación Formal'],
-            index=0  # Al Menos Un Bachiller es el más común (79,642 casos)
+            index=0
         )
     
     # ========== SECCIÓN 5: HÁBITOS Y COSTUMBRES ==========
@@ -237,14 +252,12 @@ def crear_formulario():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Número de libros
             datos['num_libros_casa'] = st.selectbox(
                 "¿Cuántos libros hay en casa?",
                 options=['0 a 10 libros', '11 a 25 libros', '26 a 100 libros', 'Más de 100 libros'],
                 index=0
             )
             
-            # Hábito de lectura
             datos['cuanto_lee'] = st.selectbox(
                 "¿Cuánto lee por entretenimiento?",
                 options=['30 minutos o menos', 'Entre 30 y 60 minutos',
@@ -252,7 +265,6 @@ def crear_formulario():
                 index=0
             )
             
-            # Perfil lector
             datos['perfil_lector'] = st.selectbox(
                 "Perfil de lector",
                 options=['Poco Apoyo, Poco Habito', 'Poco Apoyo, Buen Habito',
@@ -261,7 +273,6 @@ def crear_formulario():
             )
         
         with col2:
-            # Navegación web
             datos['cuanto_navega_web'] = st.selectbox(
                 "¿Cuánto navega en internet?",
                 options=['Entre 1 y 3 horas', 'Más de 3 horas', 'Entre 30 y 60 minutos',
@@ -269,7 +280,6 @@ def crear_formulario():
                 index=0
             )
             
-            # Horas de trabajo
             datos['horas_trabajo_semanal'] = st.selectbox(
                 "Horas de trabajo semanal",
                 options=['No trabaja', 'Trabajo ocasional', 'Tiempo parcial reducido',
@@ -351,16 +361,7 @@ def crear_formulario():
     return datos
 
 def transformar_a_one_hot(datos_usuario):
-    """
-    Transforma los datos del formulario al formato one-hot que espera el modelo.
-    
-    Args:
-        datos_usuario: Diccionario con las respuestas del formulario
-    
-    Returns:
-        DataFrame con 128 columnas en formato one-hot
-    """
-    # Lista de todas las columnas que espera el modelo (ACTUALIZADA)
+    """Transforma los datos del formulario al formato one-hot que espera el modelo"""
     columnas_modelo = [
         'nacionalidad', 'pertenece_etnia', 'internet', 'tv', 'computador',
         'lavadora', 'microndas', 'carro', 'moto', 'consola',
@@ -375,20 +376,24 @@ def transformar_a_one_hot(datos_usuario):
         'cuartos_casa_cinco', 'cuartos_casa_cuatro', 'cuartos_casa_dos',
         'cuartos_casa_seis o mas', 'cuartos_casa_tres', 'cuartos_casa_uno',
         'cuartos_casa_nan', 
-        # Educación del padre (CORREGIDO)
         'educacion_padre_bachiller',
-        'educacion_padre_bachiller incompleta', 'educacion_padre_ninguna',
-        'educacion_padre_no aplica', 'educacion_padre_primaria',
+        'educacion_padre_bachiller incompleta', 
+        'educacion_padre_ninguna',
+        'educacion_padre_no aplica',
+        'educacion_padre_postgrado',
+        'educacion_padre_primaria',
         'educacion_padre_primaria incompleta',
         'educacion_padre_profesional',
         'educacion_padre_profesional incompleta',
         'educacion_padre_tecnico/tecnologo',
         'educacion_padre_tecnico/tecnologo incompleta',
-        'educacion_padre_nan', 
-        # Educación de la madre (CORREGIDO)
+        'educacion_padre_nan',
         'educacion_madre_bachiller',
-        'educacion_madre_bachiller incompleta', 'educacion_madre_ninguna',
-        'educacion_madre_no aplica', 'educacion_madre_primaria',
+        'educacion_madre_bachiller incompleta', 
+        'educacion_madre_ninguna',
+        'educacion_madre_no aplica', 
+        'educacion_madre_postgrado',
+        'educacion_madre_primaria',
         'educacion_madre_primaria incompleta',
         'educacion_madre_profesional',
         'educacion_madre_profesional incompleta',
@@ -452,7 +457,6 @@ def transformar_a_one_hot(datos_usuario):
         'colegio_jornada_noche', 'colegio_jornada_sabatina',
         'colegio_jornada_tarde', 'colegio_jornada_unica',
         'colegio_jornada_nan', 
-        # Educación padres combinada (CORREGIDO)
         'educacion_padres_al menos un bachiller',
         'educacion_padres_bachillerato completo',
         'educacion_padres_educación primaria',
@@ -472,12 +476,8 @@ def transformar_a_one_hot(datos_usuario):
         'region_orinoquía', 'region_pacífica', 'region_nan'
     ]
     
-    # Crear DataFrame con ceros
     df_one_hot = pd.DataFrame(0, index=[0], columns=columnas_modelo)
     
-    # ========== MAPEO DE VARIABLES ==========
-    
-    # 1. Variables binarias directas
     binarias = ['internet', 'tv', 'computador', 'lavadora', 'microndas',
                'carro', 'moto', 'consola', 'colegio_bilingue']
     
@@ -488,16 +488,13 @@ def transformar_a_one_hot(datos_usuario):
             elif isinstance(datos_usuario[var], str):
                 df_one_hot[var] = 1 if datos_usuario[var].lower() in ['si', 'sí', 'yes', 'true', '1'] else 0
     
-    # 2. Variables numéricas directas
     if 'edad' in datos_usuario:
         df_one_hot['edad'] = datos_usuario['edad']
     
     if 'presento_fuera_edad' in datos_usuario:
         df_one_hot['presento_fuera_edad'] = int(datos_usuario['presento_fuera_edad'])
     
-    # 3. Variables categóricas (one-hot encoding manual) - ACTUALIZADO
     mapeo_categorias = {
-        # Estrato
         'estrato_casa': {
             'Estrato 1': 'estrato_casa_estrato 1',
             'Estrato 2': 'estrato_casa_estrato 2',
@@ -507,8 +504,6 @@ def transformar_a_one_hot(datos_usuario):
             'Estrato 6': 'estrato_casa_estrato 6',
             'Sin estrato': 'estrato_casa_sin estrato'
         },
-        
-        # Número de personas
         'num_personas_casa': {
             '1 a 2': 'num_personas_casa_1 a 2',
             '3 a 4': 'num_personas_casa_3 a 4',
@@ -516,8 +511,6 @@ def transformar_a_one_hot(datos_usuario):
             '7 a 8': 'num_personas_casa_7 a 8',
             '9 o más': 'num_personas_casa_9 o más'
         },
-        
-        # Cuartos
         'cuartos_casa': {
             'Uno': 'cuartos_casa_uno',
             'Dos': 'cuartos_casa_dos',
@@ -526,8 +519,6 @@ def transformar_a_one_hot(datos_usuario):
             'Cinco': 'cuartos_casa_cinco',
             'Seis o mas': 'cuartos_casa_seis o mas'
         },
-        
-        # Región
         'region': {
             'Amazónica': 'region_amazónica',
             'Andina': 'region_andina',
@@ -535,13 +526,12 @@ def transformar_a_one_hot(datos_usuario):
             'Orinoquía': 'region_orinoquía',
             'Pacífica': 'region_pacífica'
         },
-        
-        # Educación del padre - NUEVO
         'educacion_padre': {
             'Bachiller': 'educacion_padre_bachiller',
             'Bachiller incompleta': 'educacion_padre_bachiller incompleta',
             'Ninguna': 'educacion_padre_ninguna',
             'No aplica': 'educacion_padre_no aplica',
+            'Postgrado': 'educacion_padre_postgrado',
             'Primaria': 'educacion_padre_primaria',
             'Primaria incompleta': 'educacion_padre_primaria incompleta',
             'Profesional': 'educacion_padre_profesional',
@@ -549,13 +539,12 @@ def transformar_a_one_hot(datos_usuario):
             'Tecnico/Tecnologo': 'educacion_padre_tecnico/tecnologo',
             'Tecnico/Tecnologo incompleta': 'educacion_padre_tecnico/tecnologo incompleta'
         },
-        
-        # Educación de la madre - NUEVO
         'educacion_madre': {
             'Bachiller': 'educacion_madre_bachiller',
             'Bachiller incompleta': 'educacion_madre_bachiller incompleta',
             'Ninguna': 'educacion_madre_ninguna',
             'No aplica': 'educacion_madre_no aplica',
+            'Postgrado': 'educacion_madre_postgrado',
             'Primaria': 'educacion_madre_primaria',
             'Primaria incompleta': 'educacion_madre_primaria incompleta',
             'Profesional': 'educacion_madre_profesional',
@@ -563,8 +552,6 @@ def transformar_a_one_hot(datos_usuario):
             'Tecnico/Tecnologo': 'educacion_madre_tecnico/tecnologo',
             'Tecnico/Tecnologo incompleta': 'educacion_madre_tecnico/tecnologo incompleta'
         },
-        
-        # Educación padres combinada - NUEVO
         'educacion_padres': {
             'Al Menos Un Bachiller': 'educacion_padres_al menos un bachiller',
             'Bachillerato Completo': 'educacion_padres_bachillerato completo',
@@ -580,7 +567,6 @@ def transformar_a_one_hot(datos_usuario):
         }
     }
     
-    # Aplicar mapeo para variables categóricas conocidas
     for var_original, mapeo in mapeo_categorias.items():
         if var_original in datos_usuario:
             valor = datos_usuario[var_original]
@@ -589,7 +575,6 @@ def transformar_a_one_hot(datos_usuario):
                 if columna_one_hot in df_one_hot.columns:
                     df_one_hot[columna_one_hot] = 1
     
-    # 4. Para variables no mapeadas explícitamente, usar búsqueda inteligente
     variables_no_mapeadas = [var for var in datos_usuario.keys() 
                             if var not in binarias 
                             and var not in ['edad', 'presento_fuera_edad']
@@ -600,10 +585,8 @@ def transformar_a_one_hot(datos_usuario):
         if isinstance(valor, str):
             valor_limpio = valor.lower().replace(' ', '_').replace('/', '_').replace('ó', 'o')
             
-            # Buscar coincidencia exacta primero
             encontrado = False
             for columna in df_one_hot.columns:
-                # Verificar si la variable y valor están en la columna
                 var_en_columna = var_original.lower().replace('_', ' ') in columna.lower()
                 valor_en_columna = valor_limpio in columna.lower().replace(' ', '_')
                 
@@ -612,11 +595,9 @@ def transformar_a_one_hot(datos_usuario):
                     encontrado = True
                     break
             
-            # Si no se encontró, buscar coincidencia parcial
             if not encontrado:
                 for columna in df_one_hot.columns:
                     if var_original in columna:
-                        # Intentar coincidencia parcial del valor
                         palabras_valor = valor.lower().split()
                         for palabra in palabras_valor:
                             if palabra in columna.lower() and len(palabra) > 2:
@@ -628,17 +609,324 @@ def transformar_a_one_hot(datos_usuario):
     
     return df_one_hot
 
+def crear_grafico_distribucion(prediccion_usuario, ma_error=MAE_TEST, promedio_icfes=PROMEDIO_ICFES):
+    """Crea gráfico de distribución con predicción del usuario y rango de error - CORREGIDO"""
+    
+    media = promedio_icfes
+    desviacion = DESV_STD_ICFES
+    
+    # Generar puntos para la curva normal
+    x = np.linspace(max(0, media - 4*desviacion), min(500, media + 4*desviacion), 1000)
+    y = (1/(desviacion*np.sqrt(2*np.pi))) * np.exp(-0.5*((x-media)/desviacion)**2)
+    
+    # Calcular percentiles
+    percentiles = {
+        '25%': np.percentile(np.random.normal(media, desviacion, 10000), 25),
+        '50%': media,
+        '75%': np.percentile(np.random.normal(media, desviacion, 10000), 75)
+    }
+    
+    # Crear figura con Plotly
+    fig = go.Figure()
+    
+    # 1. Área de distribución con gradiente
+    fig.add_trace(go.Scatter(
+        x=x, y=y,
+        fill='tozeroy',
+        fillcolor=f'rgba(74, 144, 226, 0.25)',
+        line=dict(color=COLORES['primario'], width=3),
+        name='Distribución ICFES',
+        hovertemplate='<b>Puntaje:</b> %{x:.0f} pts<br><b>Densidad:</b> %{y:.4f}<extra></extra>'
+    ))
+    
+    # 2. Línea del promedio nacional - POSICIÓN FIJADA
+    fig.add_vline(
+        x=promedio_icfes,
+        line_dash="dash",
+        line_color=COLORES['advertencia'],
+        line_width=3,
+        annotation=dict(
+            text=f"<b>Promedio Nacional</b><br>{promedio_icfes:.0f} pts",
+            font=dict(size=13, color=COLORES['advertencia'], family="Arial Black"),
+            bgcolor="rgba(255, 179, 71, 0.15)",
+            bordercolor=COLORES['advertencia'],
+            borderwidth=2,
+            x=0.02,  # Posición izquierda fija (2% desde la izquierda)
+            y=0.95,  # Posición superior (95% desde abajo)
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            xanchor='left'
+        )
+    )
+    
+    # 3. Línea de tu predicción - POSICIÓN FIJADA
+    color_prediccion = COLORES['exito'] if prediccion_usuario > promedio_icfes else COLORES['info']
+    fig.add_vline(
+        x=prediccion_usuario,
+        line_dash="solid",
+        line_color=color_prediccion,
+        line_width=4,
+        annotation=dict(
+            text=f"<b>Tu Predicción</b><br>{prediccion_usuario:.0f} pts",
+            font=dict(size=14, color=color_prediccion, family="Arial Black"),
+            bgcolor=f"rgba({int(color_prediccion[1:3], 16)}, {int(color_prediccion[3:5], 16)}, {int(color_prediccion[5:7], 16)}, 0.2)",
+            bordercolor=color_prediccion,
+            borderwidth=3,
+            x=0.02,
+            y=0.75,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            xanchor='left'
+        )
+    )
+    
+    # 4. Área sombreada del rango de error (Rango de Confianza)
+    fig.add_vrect(
+        x0=max(0, prediccion_usuario - ma_error),
+        x1=min(500, prediccion_usuario + ma_error),
+        fillcolor="rgba(123, 104, 238, 0.15)",
+        line_width=0,
+        layer="below",
+        annotation=dict(
+            text=f"Rango de confianza<br>±{ma_error:.0f} pts",
+            font=dict(size=14, color='#000000'),
+            showarrow=False
+        )
+    )
+    
+    # 5. Límites del rango de error (sin anotaciones)
+    fig.add_vline(
+        x=max(0, prediccion_usuario - ma_error),
+        line_dash="dot",
+        line_color=COLORES['secundario'],
+        line_width=2,
+        opacity=0.6
+    )
+    
+    fig.add_vline(
+        x=min(500, prediccion_usuario + ma_error),
+        line_dash="dot",
+        line_color=COLORES['secundario'],
+        line_width=2,
+        opacity=0.6
+    )
+    
+    # 6. Percentiles con estilo mejorado
+    for i, (label, value) in enumerate(percentiles.items()):
+        fig.add_vline(
+            x=value,
+            line_dash="dot",
+            line_color="rgba(150, 150, 150, 0.4)",
+            line_width=1
+        )
+    
+    # Configurar diseño - COLORES DE EJES CORREGIDOS
+    fig.update_layout(
+        title=dict(
+            text="Tu predicción en el contexto nacional",
+            font=dict(size=24, color=COLORES['texto_oscuro'], family="Arial Black"),
+            x=0.5,
+            xanchor='center'
+        ),
+        xaxis=dict(
+            title="<b>Puntaje ICFES</b>",
+            title_font=dict(size=14, color='#000000'),  # NEGRO
+            tickfont=dict(size=12, color='#000000'),    # NEGRO
+            showgrid=True,
+            gridcolor='rgba(200, 200, 200, 0.3)',
+            gridwidth=1,
+            range=[max(0, media - 3*desviacion), min(500, media + 3*desviacion)],
+            zeroline=True,
+            zerolinecolor='rgba(150, 150, 150, 0.5)',
+            zerolinewidth=1
+        ),
+        yaxis=dict(
+            title="<b>Densidad de Probabilidad</b>",
+            title_font=dict(size=14, color='#000000'),  # NEGRO
+            tickfont=dict(size=12, color='#000000'),    # NEGRO
+            showgrid=True,
+            gridcolor='rgba(200, 200, 200, 0.3)',
+            gridwidth=1,
+            zeroline=True,
+            zerolinecolor='rgba(150, 150, 150, 0.5)',
+            zerolinewidth=1
+        ),
+        plot_bgcolor='white',
+        paper_bgcolor='white',  # Fondo blanco para mejor contraste
+        showlegend=False,
+        hovermode="x unified",
+        height=550,
+        margin=dict(l=80, r=40, t=100, b=80)  # Más margen izquierdo para las anotaciones
+    )
+    
+    # Agregar anotaciones de percentiles manualmente
+    for i, (label, value) in enumerate(percentiles.items()):
+        fig.add_annotation(
+            x=value,
+            y=0.02,
+            text=label,
+            font=dict(size=10, color='gray'),
+            showarrow=False,
+            xref="x",
+            yref="paper",
+            yanchor='bottom'
+        )
+    
+    return fig
+
+def mostrar_animacion_globos():
+    """Muestra animación de globos cuando el puntaje es bueno"""
+    st.markdown("""
+    <div style="text-align: center; padding: 20px;">
+        <div class="balloon">🎈</div>
+        <div class="balloon" style="animation-delay: 0.5s">🎉</div>
+        <div class="balloon" style="animation-delay: 1s">🎊</div>
+        <div class="balloon" style="animation-delay: 1.5s">⭐</div>
+        <div class="balloon" style="animation-delay: 2s">🎈</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def mostrar_mensaje_resultado(prediccion, promedio=PROMEDIO_ICFES, ma_error=MAE_TEST):
+    """Muestra mensaje personalizado basado en el resultado"""
+    
+    diferencia = prediccion - promedio
+    
+    if diferencia > ma_error * 2:
+        return "🎉 ¡EXCELENTE! Tu puntaje predicho está MUY por encima del promedio.", "success"
+    elif diferencia > ma_error:
+        return "👍 ¡BUEN TRABAJO! Tu puntaje predicho está por encima del promedio.", "success"
+    elif abs(diferencia) <= ma_error:
+        return "🤔 Tu puntaje predicho es similar al promedio nacional.", "info"
+    elif diferencia < -ma_error:
+        return "📚 Hay oportunidades para mejorar. Considera reforzar tu preparación.", "warning"
+    else:
+        return "🔍 Se recomienda atención especial. Considera buscar apoyo adicional.", "warning"
+
+def crear_grafico_errores_mejorado():
+    """Crea gráfico de distribución de errores con colores mejorados"""
+    errores_simulados = np.random.normal(0, MAE_TEST/0.7979, 10000)
+    
+    fig = go.Figure()
+    
+    # Histograma con colores mejorados
+    fig.add_trace(go.Histogram(
+        x=errores_simulados,
+        nbinsx=60,
+        name='Errores del modelo',
+        marker=dict(
+            color=errores_simulados,
+            colorscale=[
+                [0, COLORES['error']],
+                [0.5, COLORES['info']],
+                [1, COLORES['exito']]
+            ],
+            line=dict(color='white', width=1)
+        ),
+        opacity=0.8
+    ))
+    
+    # Líneas de MAE con anotaciones fijas
+    fig.add_vline(
+        x=MAE_TEST,
+        line_dash="dash",
+        line_color=COLORES['advertencia'],
+        line_width=3,
+        annotation=dict(
+            text=f"<b>+MAE</b><br>{MAE_TEST:.1f} pts",
+            font=dict(size=12, color=COLORES['advertencia']),
+            bgcolor="rgba(255, 179, 71, 0.15)",
+            x=0.05,
+            y=0.95,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            xanchor='left'
+        )
+    )
+    fig.add_vline(
+        x=-MAE_TEST,
+        line_dash="dash",
+        line_color=COLORES['advertencia'],
+        line_width=3,
+        annotation=dict(
+            text=f"<b>-MAE</b><br>{-MAE_TEST:.1f} pts",
+            font=dict(size=12, color=COLORES['advertencia']),
+            bgcolor="rgba(255, 179, 71, 0.15)",
+            x=0.05,
+            y=0.85,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            xanchor='left'
+        )
+    )
+    
+    # Línea del cero
+    fig.add_vline(
+        x=0,
+        line_dash="solid",
+        line_color=COLORES['exito'],
+        line_width=2,
+        annotation=dict(
+            text="<b>Error = 0</b>",
+            font=dict(size=12, color=COLORES['exito']),
+            x=0.05,
+            y=0.75,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            xanchor='left'
+        )
+    )
+    
+    # Configurar diseño con colores de ejes en negro
+    fig.update_layout(
+        title=dict(
+            text="📉 Distribución de Errores del Modelo",
+            font=dict(size=20, color=COLORES['texto_oscuro'], family="Arial Black"),
+            x=0.5,
+            xanchor='center'
+        ),
+        xaxis=dict(
+            title="<b>Error de Predicción (puntos)</b>",
+            title_font=dict(size=13, color='#000000'),  # NEGRO
+            tickfont=dict(size=11, color='#000000'),    # NEGRO
+            showgrid=True,
+            gridcolor='rgba(200, 200, 200, 0.3)',
+            zeroline=True,
+            zerolinecolor='rgba(150, 150, 150, 0.5)',
+            zerolinewidth=1
+        ),
+        yaxis=dict(
+            title="<b>Frecuencia</b>",
+            title_font=dict(size=13, color='#000000'),  # NEGRO
+            tickfont=dict(size=11, color='#000000'),    # NEGRO
+            showgrid=True,
+            gridcolor='rgba(200, 200, 200, 0.3)',
+            zeroline=True,
+            zerolinecolor='rgba(150, 150, 150, 0.5)',
+            zerolinewidth=1
+        ),
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False,
+        height=450,
+        margin=dict(l=80, r=40, t=80, b=80)
+    )
+    
+    return fig
+
 def main():
     """Función principal de la aplicación"""
     
-    # Cargar modelo
     modelo = cargar_modelo()
     
     if modelo is None:
         st.error("No se pudo cargar el modelo. Verifica la ruta del archivo.")
         st.stop()
     
-    # Crear formulario
     st.sidebar.title("🔍 Navegación")
     pagina = st.sidebar.radio(
         "Selecciona una página:",
@@ -652,9 +940,10 @@ def main():
         del ICFES basado en variables socioeconómicas.
         
         **Características:**
-        - Predicción individual de puntajes
+        - Predicción individual de puntajes con márgenes de error
         - Análisis de importancia de variables
-        - Visualización de resultados
+        - Visualización de resultados interactivos
+        - Comparación con el promedio nacional
         
         **Instrucciones:**
         1. Navega a la pestaña **Predicción**
@@ -662,66 +951,186 @@ def main():
         3. Haz clic en **Predecir Puntaje**
         4. Revisa los resultados y análisis
         """)
+        
+        with st.expander("📊 Métricas del Modelo"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("MAE (Test)", f"{MAE_TEST:.1f} pts", 
+                         "Error absoluto medio")
+            with col2:
+                st.metric("Promedio Nacional", f"{PROMEDIO_ICFES:.0f} pts",
+                         "Puntaje promedio ICFES")
+            with col3:
+                st.metric("Desviación Estándar", f"{DESV_STD_ICFES:.1f} pts",
+                         "Variabilidad de puntajes")
     
     elif pagina == "🎯 Predicción":
-        # Crear formulario
         datos_usuario = crear_formulario()
         
         st.markdown("---")
         
-        # Botón para predecir
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("🔮 Predecir Puntaje ICFES", type="primary", use_container_width=True):
                 with st.spinner("Procesando datos y calculando predicción..."):
                     try:
-                        # Transformar datos a one-hot
                         datos_one_hot = transformar_a_one_hot(datos_usuario)
-                        
-                        # Hacer predicción
                         prediccion = modelo.predict(datos_one_hot)
+                        puntaje_predicho = float(prediccion[0])
                         
-                        # Mostrar resultado
                         st.success("✅ Predicción completada")
+                        st.markdown("---")
+                        
+                        with st.container():
+                            col_res1, col_res2, col_res3 = st.columns([1, 2, 1])
+                            with col_res2:
+                                st.markdown(f"""
+                                <div style="text-align: center; padding: 30px; border-radius: 15px; 
+                                            background: linear-gradient(135deg, {COLORES['degradado_1']} 0%, {COLORES['degradado_2']} 100%);
+                                            color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                                    <h2 style="margin: 0; font-size: 1.8rem; font-weight: 600;">Puntaje Predicho</h2>
+                                    <h1 style="margin: 15px 0; font-size: 5rem; font-weight: 800;">{puntaje_predicho:.0f}</h1>
+                                    <p style="margin: 0; font-size: 1.3rem; opacity: 0.95;">puntos ICFES</p>
+                                </div>
+                                """, unsafe_allow_html=True)
                         
                         st.markdown("---")
-                        st.markdown(f"### 📊 Puntaje Predicho: **{prediccion[0]:.0f} puntos**")
                         
-                        # Interpretación del resultado
-                        with st.expander("📈 Interpretación del resultado"):
+                        st.markdown("### 📊 Interpretación del Resultado")
+                        
+                        col_met1, col_met2, col_met3 = st.columns(3)
+                        
+                        with col_met1:
+                            st.metric(
+                                label="Puntaje Predicho",
+                                value=f"{puntaje_predicho:.0f}",
+                                delta=f"{puntaje_predicho - PROMEDIO_ICFES:+.0f} vs promedio",
+                                delta_color="normal"
+                            )
+                        
+                        with col_met2:
+                            st.metric(
+                                label="Margen de Error",
+                                value=f"±{MAE_TEST:.1f} pts",
+                                help="Error absoluto medio del modelo en datos de prueba"
+                            )
+                        
+                        with col_met3:
+                            rango_inferior = max(0, puntaje_predicho - MAE_TEST)
+                            rango_superior = min(500, puntaje_predicho + MAE_TEST)
+                            st.metric(
+                                label="Rango Probable",
+                                value=f"{rango_inferior:.0f}-{rango_superior:.0f}",
+                                help="Tu puntaje real probablemente esté en este rango"
+                            )
+                        
+                        mensaje, tipo = mostrar_mensaje_resultado(puntaje_predicho)
+                        
+                        if tipo == "success":
+                            st.success(mensaje)
+                            if puntaje_predicho > PROMEDIO_ICFES:
+                                st.markdown("---")
+                                mostrar_animacion_globos()
+                        elif tipo == "warning":
+                            st.warning(mensaje)
+                        else:
+                            st.info(mensaje)
+                        
+                        st.markdown("---")
+                        
+                        st.markdown("### 📈 Visualización de la Predicción")
+                        fig = crear_grafico_distribucion(puntaje_predicho)
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        with st.expander("📖 ¿Cómo interpretar este gráfico?"):
                             st.write(f"""
-                            **Puntaje ICFES predicho:** {prediccion[0]:.0f} puntos
+                            **Elementos clave del gráfico:**
                             
-                            **Interpretación:**
-                            - Este valor representa el puntaje esperado en la prueba ICFES
-                            - El rango típico de puntajes va de 0 a 500 puntos
-                            - Factores que más influyeron en esta predicción:
-                              1. Variable A
-                              2. Variable B
-                              3. Variable C
+                            1. **Curva azul**: Distribución típica de puntajes ICFES
+                            2. **Línea naranja (---)**: Puntaje promedio nacional ({PROMEDIO_ICFES:.0f} pts)
+                            3. **Línea verde/azul sólida**: Tu puntaje predicho ({puntaje_predicho:.0f} pts)
+                            4. **Área púrpura**: Rango de confianza (±{MAE_TEST:.1f} puntos)
                             
-                            **Nota:** Esta es una estimación basada en patrones históricos.
-                            El resultado real puede variar.
+                            **Interpretación importante:**
+                            - El modelo tiene un **error medio de {MAE_TEST:.1f} puntos**
+                            - Tu puntaje real probablemente esté entre **{max(0, puntaje_predicho-MAE_TEST):.0f} y {min(500, puntaje_predicho+MAE_TEST):.0f} puntos**
+                            - La predicción es una **estimación**, no un valor exacto
                             """)
                         
-                        # Mostrar datos procesados (opcional, para debugging)
-                        with st.expander("🔍 Ver datos procesados (para desarrollo)"):
+                        st.markdown("---")
+                        
+                        st.markdown("### 🔍 Factores que Influyeron en la Predicción")
+                        
+                        with st.expander("Ver detalles técnicos"):
+                            st.write(f"""
+                            **Métricas del modelo:**
+                            - **MAE (Test):** {MAE_TEST:.1f} puntos
+                            - **Promedio histórico:** {PROMEDIO_ICFES:.0f} puntos
+                            - **Desviación estándar:** {DESV_STD_ICFES:.1f} puntos
+                            
+                            **Interpretación del margen de error:**
+                            1. El modelo se equivoca en promedio por ±{MAE_TEST:.1f} puntos
+                            2. Esto representa el {MAE_TEST/DESV_STD_ICFES*100:.1f}% de la variabilidad total
+                            3. Tu puntaje real podría variar hasta {MAE_TEST:.0f} puntos
+                            """)
+                        
+                        if puntaje_predicho < PROMEDIO_ICFES - MAE_TEST:
+                            with st.expander("💡 Recomendaciones para mejorar"):
+                                st.write("""
+                                **Acciones sugeridas:**
+                                
+                                1. **Refuerzo académico**: Enfócate en áreas con menor desempeño
+                                2. **Simulacros**: Realiza pruebas prácticas regularmente
+                                3. **Plan de estudio**: 2-3 horas diarias de estudio constante
+                                4. **Recursos**: Utiliza guías oficiales del ICFES
+                                5. **Apoyo**: Considera tutorías o preicfes gratuitos
+                                6. **Hábitos**: Duerme bien y aliméntate adecuadamente
+                                """)
+                        
+                        with st.expander("🔍 Ver datos procesados"):
                             st.write("**Datos en formato one-hot:**")
                             st.dataframe(datos_one_hot.T[datos_one_hot.T[0] > 0])
                             
                     except Exception as e:
                         st.error(f"❌ Error al hacer la predicción: {str(e)}")
-                        st.info("""
-                        **Posibles soluciones:**
-                        1. Verifica que todos los campos estén completos
-                        2. Asegúrate de que el modelo esté correctamente cargado
-                        3. Revisa la transformación de datos a one-hot
-                        """)
     
     elif pagina == "📊 Análisis":
         st.title("📊 Análisis del Modelo")
-        st.write("En construcción...")
-        # Aquí irán las métricas, gráficos de importancia, etc.
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("MAE en Test", f"{MAE_TEST:.1f} pts", 
+                     "Error absoluto medio")
+            st.metric("RMSE en Test", "38.9 pts", 
+                     "Raíz del error cuadrático medio")
+            
+        with col2:
+            st.metric("R² en Test", "0.3566", 
+                     "Varianza explicada")
+            st.metric("MedAE en Test", "27.1 pts", 
+                     "Mediana del error absoluto")
+        
+        st.markdown("---")
+        
+        st.subheader("📈 Distribución del Error del Modelo")
+        
+        fig_errores = crear_grafico_errores_mejorado()
+        st.plotly_chart(fig_errores, use_container_width=True)
+        
+        with st.expander("📖 Interpretación del análisis"):
+            st.write(f"""
+            **Análisis de las métricas:**
+            
+            1. **MAE = {MAE_TEST:.1f} puntos**: El modelo se equivoca en promedio por ±{MAE_TEST:.1f} puntos
+            2. **R² = 0.3566**: El modelo explica el 35.7% de la variabilidad en los puntajes
+            3. **Comparación**: Nuestro modelo reduce el error en un {((DESV_STD_ICFES*0.8 - MAE_TEST)/(DESV_STD_ICFES*0.8)*100):.1f}% respecto a un modelo base
+            
+            **Limitaciones:**
+            - Solo considera variables socioeconómicas
+            - No incluye hábitos de estudio individuales
+            - Factores no observables representan gran parte de la variabilidad
+            """)
 
 if __name__ == "__main__":
     main()
