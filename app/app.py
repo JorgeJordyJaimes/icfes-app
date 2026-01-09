@@ -921,86 +921,142 @@ def crear_grafico_errores_mejorado():
 
 def main():
     """Función principal de la aplicación"""
-    
+
     modelo = cargar_modelo()
-    
+
     if modelo is None:
         st.error("No se pudo cargar el modelo. Verifica la ruta del archivo.")
         st.stop()
-    
+
     st.sidebar.title("🔍 Navegación")
     pagina = st.sidebar.radio(
         "Selecciona una página:",
         ["🏠 Inicio", "🎯 Predicción", "📊 Análisis"]
     )
-    
+
     if pagina == "🏠 Inicio":
         st.title("Bienvenido al Predictor de Puntajes ICFES")
-        st.write("""
-        Esta herramienta utiliza un modelo de Random Forest para predecir puntajes 
-        del ICFES basado en variables socioeconómicas.
+        st.write(
+            "Esta herramienta utiliza un modelo de Random Forest para predecir los puntajes del ICFES "
+            "a partir de variables socioeconómicas."
+        )
+
+        st.divider()
+
+        st.markdown(
+            """
+### **Instrucciones:**
+1. Navega a la pestaña **Predicción**
+2. Completa el formulario con la información requerida
+3. Haz clic en **Predecir Puntaje**
+4. Revisa los resultados y análisis"""
+        )
         
-        **Características:**
-        - Predicción individual de puntajes con márgenes de error
-        - Análisis de importancia de variables
-        - Visualización de resultados interactivos
-        - Comparación con el promedio nacional
-        
-        **Instrucciones:**
-        1. Navega a la pestaña **Predicción**
-        2. Completa el formulario con la información requerida
-        3. Haz clic en **Predecir Puntaje**
-        4. Revisa los resultados y análisis
-        """)
-        
+        st.divider()
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("¿Qué es este proyecto?")
+            st.write(
+                "Este modelo hace parte de un **proyecto personal** cuyo objetivo fue recorrer "
+                "todo el ciclo de vida de un sistema de Machine Learning: preparación de datos, "
+                "entrenamiento, evaluación y despliegue en una aplicación interactiva."
+            )
+            st.write(
+                "El modelo utilizado es un **Random Forest**, entrenado con datos de resultados "
+                "del ICFES del año **2020**."
+            )
+
+        with col2:
+            st.subheader("⚠️ Limitaciones importantes")
+            st.warning(
+                "El modelo fue entrenado únicamente con variables socioeconómicas, "
+                "las cuales no explican completamente el desempeño en el examen."
+            )
+            st.write(
+                "Por esta razón, el modelo alcanza un **R² cercano al 35%**, lo que indica que "
+                "las predicciones deben interpretarse como una **aproximación exploratoria**, "
+                "no como un resultado exacto."
+            )
+
+        st.divider()
+
+        # MOTIVACIÓN
+        st.subheader("Motivación del proyecto")
+        st.write(
+            "Existe una percepción común de que los exámenes actuales son “más fáciles” que en el pasado. "
+            "Este proyecto permite que personas que presentaron el ICFES hace años puedan estimar "
+            "cómo les iría si lo presentaran hoy."
+        )
+        st.write(
+            "Aunque los datos corresponden a 2020, la **metodología del examen no ha cambiado "
+            "de forma significativa**, por lo que el ejercicio sigue siendo válido como análisis."
+        )
+
         with st.expander("📊 Métricas del Modelo"):
             col1, col2, col3 = st.columns(3)
+
             with col1:
-                st.metric("MAE (Test)", f"{MAE_TEST:.1f} pts", 
-                         "Error absoluto medio")
+                st.metric(
+                    "MAE (Test)", f"{MAE_TEST:.1f} pts",
+                    "Error absoluto medio"
+                )
+
             with col2:
-                st.metric("Promedio Nacional", f"{PROMEDIO_ICFES:.0f} pts",
-                         "Puntaje promedio ICFES")
+                st.metric(
+                    "Promedio Nacional", f"{PROMEDIO_ICFES:.0f} pts",
+                    "Puntaje promedio ICFES"
+                )
+
             with col3:
-                st.metric("Desviación Estándar", f"{DESV_STD_ICFES:.1f} pts",
-                         "Variabilidad de puntajes")
-    
+                st.metric(
+                    "Desviación Estándar", f"{DESV_STD_ICFES:.1f} pts",
+                    "Variabilidad de puntajes"
+                )
+
     elif pagina == "🎯 Predicción":
         datos_usuario = crear_formulario()
-        
+
         st.markdown("---")
-        
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🔮 Predecir Puntaje ICFES", type="primary", use_container_width=True):
+            if st.button(
+                "🔮 Predecir Puntaje ICFES",
+                type="primary",
+                use_container_width=True
+            ):
                 with st.spinner("Procesando datos y calculando predicción..."):
                     try:
                         datos_one_hot = transformar_a_one_hot(datos_usuario)
                         prediccion = modelo.predict(datos_one_hot)
                         puntaje_predicho = float(prediccion[0])
-                        
+
                         st.success("✅ Predicción completada")
                         st.markdown("---")
-                        
+
                         with st.container():
                             col_res1, col_res2, col_res3 = st.columns([1, 2, 1])
                             with col_res2:
-                                st.markdown(f"""
-                                <div style="text-align: center; padding: 30px; border-radius: 15px; 
-                                            background: linear-gradient(135deg, {COLORES['degradado_1']} 0%, {COLORES['degradado_2']} 100%);
-                                            color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-                                    <h2 style="margin: 0; font-size: 1.8rem; font-weight: 600;">Puntaje Predicho</h2>
-                                    <h1 style="margin: 15px 0; font-size: 5rem; font-weight: 800;">{puntaje_predicho:.0f}</h1>
-                                    <p style="margin: 0; font-size: 1.3rem; opacity: 0.95;">puntos ICFES</p>
-                                </div>
-                                """, unsafe_allow_html=True)
-                        
+                                st.markdown(
+                                    f"""
+<div style="text-align: center; padding: 30px; border-radius: 15px; 
+            background: linear-gradient(135deg, {COLORES['degradado_1']} 0%, {COLORES['degradado_2']} 100%);
+            color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <h2 style="margin: 0; font-size: 1.8rem; font-weight: 600;">Puntaje Predicho</h2>
+    <h1 style="margin: 15px 0; font-size: 5rem; font-weight: 800;">{puntaje_predicho:.0f}</h1>
+    <p style="margin: 0; font-size: 1.3rem; opacity: 0.95;">puntos ICFES</p>
+</div>
+""",
+                                    unsafe_allow_html=True
+                                )
+
                         st.markdown("---")
-                        
                         st.markdown("### 📊 Interpretación del Resultado")
-                        
+
                         col_met1, col_met2, col_met3 = st.columns(3)
-                        
+
                         with col_met1:
                             st.metric(
                                 label="Puntaje Predicho",
@@ -1008,14 +1064,14 @@ def main():
                                 delta=f"{puntaje_predicho - PROMEDIO_ICFES:+.0f} vs promedio",
                                 delta_color="normal"
                             )
-                        
+
                         with col_met2:
                             st.metric(
                                 label="Margen de Error",
                                 value=f"±{MAE_TEST:.1f} pts",
                                 help="Error absoluto medio del modelo en datos de prueba"
                             )
-                        
+
                         with col_met3:
                             rango_inferior = max(0, puntaje_predicho - MAE_TEST)
                             rango_superior = min(500, puntaje_predicho + MAE_TEST)
@@ -1024,9 +1080,9 @@ def main():
                                 value=f"{rango_inferior:.0f}-{rango_superior:.0f}",
                                 help="Tu puntaje real probablemente esté en este rango"
                             )
-                        
+
                         mensaje, tipo = mostrar_mensaje_resultado(puntaje_predicho)
-                        
+
                         if tipo == "success":
                             st.success(mensaje)
                             if puntaje_predicho > PROMEDIO_ICFES:
@@ -1036,102 +1092,105 @@ def main():
                             st.warning(mensaje)
                         else:
                             st.info(mensaje)
-                        
+
                         st.markdown("---")
-                        
                         st.markdown("### 📈 Visualización de la Predicción")
+
                         fig = crear_grafico_distribucion(puntaje_predicho)
                         st.plotly_chart(fig, use_container_width=True)
-                        
+
                         with st.expander("📖 ¿Cómo interpretar este gráfico?"):
-                            st.write(f"""
-                            **Elementos clave del gráfico:**
-                            
-                            1. **Curva azul**: Distribución típica de puntajes ICFES
-                            2. **Línea naranja (---)**: Puntaje promedio nacional ({PROMEDIO_ICFES:.0f} pts)
-                            3. **Línea verde/azul sólida**: Tu puntaje predicho ({puntaje_predicho:.0f} pts)
-                            4. **Área púrpura**: Rango de confianza (±{MAE_TEST:.1f} puntos)
-                            
-                            **Interpretación importante:**
-                            - El modelo tiene un **error medio de {MAE_TEST:.1f} puntos**
-                            - Tu puntaje real probablemente esté entre **{max(0, puntaje_predicho-MAE_TEST):.0f} y {min(500, puntaje_predicho+MAE_TEST):.0f} puntos**
-                            - La predicción es una **estimación**, no un valor exacto
-                            """)
-                        
+                            st.write(
+                                f"""
+**Elementos clave del gráfico:**
+
+1. **Curva azul**: Distribución típica de puntajes ICFES
+2. **Línea naranja (---)**: Puntaje promedio nacional ({PROMEDIO_ICFES:.0f} pts)
+3. **Línea verde/azul sólida**: Tu puntaje predicho ({puntaje_predicho:.0f} pts)
+4. **Área púrpura**: Rango de confianza (±{MAE_TEST:.1f} puntos)
+
+**Interpretación importante:**
+- El modelo tiene un **error medio de {MAE_TEST:.1f} puntos**
+- Tu puntaje real probablemente esté entre **{max(0, puntaje_predicho - MAE_TEST):.0f} y {min(500, puntaje_predicho + MAE_TEST):.0f} puntos**
+- La predicción es una **estimación**, no un valor exacto
+"""
+                            )
+
                         st.markdown("---")
-                        
                         st.markdown("### 🔍 Factores que Influyeron en la Predicción")
-                        
+
                         with st.expander("Ver detalles técnicos"):
-                            st.write(f"""
-                            **Métricas del modelo:**
-                            - **MAE (Test):** {MAE_TEST:.1f} puntos
-                            - **Promedio histórico:** {PROMEDIO_ICFES:.0f} puntos
-                            - **Desviación estándar:** {DESV_STD_ICFES:.1f} puntos
-                            
-                            **Interpretación del margen de error:**
-                            1. El modelo se equivoca en promedio por ±{MAE_TEST:.1f} puntos
-                            2. Esto representa el {MAE_TEST/DESV_STD_ICFES*100:.1f}% de la variabilidad total
-                            3. Tu puntaje real podría variar hasta {MAE_TEST:.0f} puntos
-                            """)
-                        
+                            st.write(
+                                f"""
+**Métricas del modelo:**
+- **MAE (Test):** {MAE_TEST:.1f} puntos
+- **Promedio histórico:** {PROMEDIO_ICFES:.0f} puntos
+- **Desviación estándar:** {DESV_STD_ICFES:.1f} puntos
+
+**Interpretación del margen de error:**
+1. El modelo se equivoca en promedio por ±{MAE_TEST:.1f} puntos
+2. Esto representa el {MAE_TEST / DESV_STD_ICFES * 100:.1f}% de la variabilidad total
+3. Tu puntaje real podría variar hasta {MAE_TEST:.0f} puntos
+"""
+                            )
+
                         if puntaje_predicho < PROMEDIO_ICFES - MAE_TEST:
                             with st.expander("💡 Recomendaciones para mejorar"):
-                                st.write("""
-                                **Acciones sugeridas:**
-                                
-                                1. **Refuerzo académico**: Enfócate en áreas con menor desempeño
-                                2. **Simulacros**: Realiza pruebas prácticas regularmente
-                                3. **Plan de estudio**: 2-3 horas diarias de estudio constante
-                                4. **Recursos**: Utiliza guías oficiales del ICFES
-                                5. **Apoyo**: Considera tutorías o preicfes gratuitos
-                                6. **Hábitos**: Duerme bien y aliméntate adecuadamente
-                                """)
-                        
+                                st.write(
+                                    """
+**Acciones sugeridas:**
+
+1. **Refuerzo académico**: Enfócate en áreas con menor desempeño
+2. **Simulacros**: Realiza pruebas prácticas regularmente
+3. **Plan de estudio**: 2-3 horas diarias de estudio constante
+4. **Recursos**: Utiliza guías oficiales del ICFES
+5. **Apoyo**: Considera tutorías o preicfes gratuitos
+6. **Hábitos**: Duerme bien y aliméntate adecuadamente
+"""
+                                )
+
                         with st.expander("🔍 Ver datos procesados"):
                             st.write("**Datos en formato one-hot:**")
                             st.dataframe(datos_one_hot.T[datos_one_hot.T[0] > 0])
-                            
+
                     except Exception as e:
                         st.error(f"❌ Error al hacer la predicción: {str(e)}")
-    
+
     elif pagina == "📊 Análisis":
         st.title("📊 Análisis del Modelo")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
-            st.metric("MAE en Test", f"{MAE_TEST:.1f} pts", 
-                     "Error absoluto medio")
-            st.metric("RMSE en Test", "38.9 pts", 
-                     "Raíz del error cuadrático medio")
-            
+            st.metric("MAE en Test", f"{MAE_TEST:.1f} pts", "Error absoluto medio")
+            st.metric("RMSE en Test", "38.9 pts", "Raíz del error cuadrático medio")
+
         with col2:
-            st.metric("R² en Test", "0.3566", 
-                     "Varianza explicada")
-            st.metric("MedAE en Test", "27.1 pts", 
-                     "Mediana del error absoluto")
-        
+            st.metric("R² en Test", "0.3566", "Varianza explicada")
+            st.metric("MedAE en Test", "27.1 pts", "Mediana del error absoluto")
+
         st.markdown("---")
-        
         st.subheader("📈 Distribución del Error del Modelo")
-        
+
         fig_errores = crear_grafico_errores_mejorado()
         st.plotly_chart(fig_errores, use_container_width=True)
-        
+
         with st.expander("📖 Interpretación del análisis"):
-            st.write(f"""
-            **Análisis de las métricas:**
-            
-            1. **MAE = {MAE_TEST:.1f} puntos**: El modelo se equivoca en promedio por ±{MAE_TEST:.1f} puntos
-            2. **R² = 0.3566**: El modelo explica el 35.7% de la variabilidad en los puntajes
-            3. **Comparación**: Nuestro modelo reduce el error en un {((DESV_STD_ICFES*0.8 - MAE_TEST)/(DESV_STD_ICFES*0.8)*100):.1f}% respecto a un modelo base
-            
-            **Limitaciones:**
-            - Solo considera variables socioeconómicas
-            - No incluye hábitos de estudio individuales
-            - Factores no observables representan gran parte de la variabilidad
-            """)
+            st.write(
+                f"""
+**Análisis de las métricas:**
+
+1. **MAE = {MAE_TEST:.1f} puntos**: El modelo se equivoca en promedio por ±{MAE_TEST:.1f} puntos
+2. **R² = 0.3566**: El modelo explica el 35.7% de la variabilidad en los puntajes
+3. **Comparación**: Nuestro modelo reduce el error en un {((DESV_STD_ICFES * 0.8 - MAE_TEST) / (DESV_STD_ICFES * 0.8) * 100):.1f}% respecto a un modelo base
+
+**Limitaciones:**
+- Solo considera variables socioeconómicas
+- No incluye hábitos de estudio individuales
+- Factores no observables representan gran parte de la variabilidad
+"""
+            )
+
 
 if __name__ == "__main__":
     main()
